@@ -10,4 +10,5 @@ Required Libraries:
 
 How to use:
 #instructions on how to use program
-to download libraries: 
+to download libraries:
+Need to run program at least once for folders to be locally setup 

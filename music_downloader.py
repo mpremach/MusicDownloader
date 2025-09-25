@@ -52,13 +52,9 @@ def download_audio():
         os.remove(filename)  # Remove original downloaded file
         print(f"Removed original file: {filename}")
 
-        choose_cover(mp3_filename)
 
-        try:
-            audio = EasyID3(mp3_filename)  # Load mp3 file for metadata editing
-        except error:
-            audio = ID3()  # Create new ID3 tag if none exists
-            audio.save(mp3_filename)
+        add_metadata(mp3_filename)  # Add metadata to mp3 file
+        choose_cover(mp3_filename)  # Allow user to choose a cover for the mp3 file
             
 
 #Function to also for choosing a cover
@@ -72,7 +68,7 @@ def choose_cover(mp3_file):
     for i in range(len(covers)):
         print(f"{i + 1}: {covers[i]}")
         
-    choice = (input("Choose the cover you would like to use corresponding to the number or click enter to keep existing cover: ")).strip()
+    choice = (input("Choose the cover you would like to use corresponding to the number or click enter for no cover: ")).strip()
     if choice == "":
         print("Keeping existing cover")
         return None
@@ -98,6 +94,31 @@ def choose_cover(mp3_file):
             print("Invalid number, keeping existing cover.")
     except ValueError:
         print("Invalid input, keeping existing cover.")
+
+def add_metadata(mp3_file):
+    try:
+        audio = EasyID3(mp3_file)  # Load mp3 file for metadata editing
+    except error:
+        audio = ID3()  # Create new ID3 tag if none exists
+        audio.save(mp3_file)
+        audio = EasyID3(mp3_file)
+
+    title = input("Enter song title or press enter for none: ").strip()
+    artist = input("Enter artist name or press enter for none: ").strip()
+    album = input("Enter album name or press enter for none: ").strip()
+    year = input("Enter year or press enter for none: ").strip()
+
+    if title:
+        audio['title'] = title
+    if artist:
+        audio['artist'] = artist
+    if album:
+        audio['album'] = album
+    if year:
+        audio['date'] = year
+
+    audio.save()  # Save changes to mp3 file
+    print("Metadata added to mp3 file.")
     
 
 
