@@ -1,36 +1,110 @@
-#Standard library imports
-import os # For file path manipulations
+# Standard library imports
+import os  # For working with file paths and directories
 
-#Third party imports
-from pydub import AudioSegment # Converting audio formats to mp3
-from yt_dlp import YoutubeDL # For downloading audio from YouTube and other platforms
-from mutagen.easyid3 import EasyID3 # For editing mp3 metadata
+# Third-party imports
+from pydub import AudioSegment  # For converting audio files to mp3
+from yt_dlp import YoutubeDL  # For downloading audio from YouTube/SoundCloud
+from mutagen.easyid3 import EasyID3  # For editing mp3 metadata
+from mutagen.id3 import ID3, APIC, error  # For adding album art to mp3
 
+# Setup FFmpeg/FFprobe paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Current script directory
+FFMPEG_DIR = os.path.join(BASE_DIR, "ffmpeg")  # Folder containing ffmpeg.exe and ffprobe.exe
 
-FFMPEG_PATH = os.path.join("ffmpeg", "bin", "ffmpeg.exe") # Path to ffmpeg executable
-AudioSegment.converter = FFMPEG_PATH # Set ffmpeg path for pydub
-MUSIC_FOLDER = os.path.join(os.path.expanduser("~"), "Music") # Default music folder
-DOWNLOAD_FOLDER = os.path.join(MUSIC_FOLDER, "MusicDownloader") # Folder to save downloaded music
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True) # Create download folder if it doesn't exist
+# Add FFmpeg folder to PATH so subprocess can find it
+os.environ["PATH"] = FFMPEG_DIR + os.pathsep + os.environ.get("PATH", "")
+
+# Tell pydub explicitly where ffmpeg and ffprobe are
+AudioSegment.converter = os.path.join(FFMPEG_DIR, "ffmpeg.exe")
+AudioSegment.ffprobe = os.path.join(FFMPEG_DIR, "ffprobe.exe")
+
+# Check if ffmpeg and ffprobe exist
+print("ffmpeg exists?", os.path.exists(AudioSegment.converter))
+print("ffprobe exists?", os.path.exists(AudioSegment.ffprobe))
+
+# Setup download folder
+MUSIC_FOLDER = os.path.join(os.path.expanduser("~"), "Music")  # Default music folder
+DOWNLOAD_FOLDER = os.path.join(MUSIC_FOLDER, "MusicDownloader")  # Folder to save downloaded music
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)  # Create folder if it doesn't exist
+COVERS_FOLDER = os.path.join(DOWNLOAD_FOLDER, "Covers")  # Folder to save album covers
+os.makedirs(COVERS_FOLDER, exist_ok=True)  # Create folder if it doesn't exist
 print(f"Download folder set to: {DOWNLOAD_FOLDER}")
 
-
+# Function to download and convert audio
 def download_audio():
-
-    # Ask the user to paste the URL of the track
-    url = input("Paste YouTube or SoundCloud URL here: ").strip()
+    url = input("Paste YouTube or SoundCloud URL here: ").strip()  # Ask user for URL
 
     ydl_opts = {
-        'format': 'bestaudio/best', # Get best quality audio
-        'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(title)s.%(ext)s'), # Provide ydl with a template for name and file type and name
-        'noplaylist': True, # Do not download playlists, only single videos even if in playlist
+        'format': 'bestaudio/best',  # Get best quality audio
+        'outtmpl': os.path.join(DOWNLOAD_FOLDER, '%(title)s.%(ext)s'),  # Save template (title, file type)
+        'noplaylist': True,  # Only download single videos even if URL is a playlist
     }
 
     with YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url]) # Download the audio
-        print("Download complete.")
+        info = ydl.extract_info(url, download=True)  # Download audio
+        filename = ydl.prepare_filename(info)  # Get the downloaded file path
+        print(f"Downloaded file: {filename}")
 
+        mp3_filename = os.path.splitext(filename)[0] + '.mp3'  # Change file extension to .mp3
+        sound = AudioSegment.from_file(filename)  # Load downloaded file
+        sound.export(mp3_filename, format="mp3")  # Export as mp3
+        print(f"Converted to mp3: {mp3_filename}")
+        os.remove(filename)  # Remove original downloaded file
+        print(f"Removed original file: {filename}")
+
+        choose_cover(mp3_filename)
+
+        try:
+            audio = EasyID3(mp3_filename)  # Load mp3 file for metadata editing
+        except error:
+            audio = ID3()  # Create new ID3 tag if none exists
+            audio.save(mp3_filename)
+            
+
+#Function to also for choosing a cover
+def choose_cover(mp3_file):
+    covers = [f for f in os.listdir(COVERS_FOLDER) 
+              if os.path.isfile(os.path.join(COVERS_FOLDER, f))]
+    if not covers:
+        print("No covers available.")
+        return None
+    print("Available covers:")
+    for i in range(len(covers)):
+        print(f"{i + 1}: {covers[i]}")
+        
+    choice = (input("Choose the cover you would like to use corresponding to the number or click enter to keep existing cover: ")).strip()
+    if choice == "":
+        print("Keeping existing cover")
+        return None
+
+    try:
+        choice_num = int(choice)
+        if 1 <= choice_num <= len(covers):
+            selected_cover = os.path.join(COVERS_FOLDER, covers[choice_num - 1])
+            print(f"Selected cover: {covers[choice_num - 1]}")
+
+
+            audio = ID3(mp3_file)
+            with open(selected_cover, 'rb') as img:
+                audio['APIC'] = APIC(
+                    encoding=3,
+                    mime=f"image/{selected_cover.split('.')[-1].lower()}",
+                    type=3,
+                    data=img.read()
+                )
+            audio.save()
+            print("Cover added to mp3 file.")
+        else:
+            print("Invalid number, keeping existing cover.")
+    except ValueError:
+        print("Invalid input, keeping existing cover.")
+    
+
+
+
+
+
+    
+
+# Run the download function
 download_audio()
-
-
-
