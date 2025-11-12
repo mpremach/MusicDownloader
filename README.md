@@ -1,14 +1,31 @@
-Music Downloader
-#include description of program
+# Python Music Downloader & Tagger
 
-Prereqs:
-#include any prereqs that need to be downloaded first along with the links to download them
-python
+[INSERT DEMO GIF HERE]
 
-Required Libraries:
-#add all required libraries
+---
+  Features
 
-How to use:
-#instructions on how to use program
-to download libraries:
-Need to run program at least once for folders to be locally setup 
+* Downloads audio from YouTube or SoundCloud URLs.
+* Converts downloaded audio files (e.g., `.webm`, `.m4a`) to `.mp3`.
+* Prompts user to add ID3 tags (Title, Artist, Album, Year).
+* Prompts user to select and embed local album art.
+* Cleans up original downloaded files after conversion.
+
+---
+
+## Tech Stack
+
+* **Python 3**
+* **yt-dlp**
+* **Pydub**
+* **Mutagen**
+* **FFmpeg / FFprobe**
+
+---
+
+## Setup & Installation
+
+### 1. FFmpeg
+
+This script requires `ffmpeg.exe` and `ffprobe.exe` to be placed in an `ffmpeg` folder in the root of this project.
+
